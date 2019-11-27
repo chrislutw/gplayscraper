@@ -1,51 +1,29 @@
-import gplay from 'google-play-scraper'
-import db from './db'
-import * as R from 'ramda'
+import express from 'express'
+import cors from 'cors'
+import db from './lib/db'
+import { getGooglePlayReviews, getGooglePlayReviewsAndSaveDb } from './lib/scraper'
 
-function init() {
-  gplay.memoized()
-}
+const app = express()
+app.use(cors())
 
-function getGooglePlayReviews(_appId) {
-  gplay
-    .memoized()
-    .reviews({
-      appId: _appId,
-      num: 200,
-      lang: 'zh-TW',
-      sort: gplay.sort.NEWEST
-    })
-    .then(showReviews, errorHandle)
-}
+app.get(`/scrape/:appId`, async (req, res, next) => {
+  const _appId = req.params.appId
+  console.log(`Scraping ${_appId}!!`)
 
-function showReviews(reviews) {
-  const insertToDbFormat = reviews.map(data => ({
-    id: data.id,
-    userName: data.userName,
-    date: data.date,
-    title: data.title,
-    text: data.text,
-    score: data.score,
-    version: data.version,
-    url: data.url,
-    replyText: data.replyText,
-    replyDate: data.replyDate
-  }))
-  const reduceByCountFn = (acc, obj) => (acc += 1)
-  const groupByScore = data => data.scoreText
-  const groupByDate = data => new Date(data.date).toLocaleDateString()
-  const baseMerge = R.merge({ '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 })
-  const dateColl = R.groupBy(groupByDate, reviews)
-  for (let [key, reviews] of Object.entries(dateColl)) {
-    dateColl[key] = baseMerge(R.reduceBy(reduceByCountFn, 0, groupByScore, reviews))
-  }
-  console.log(dateColl)
-  db.set('rateAgreegation', dateColl).write()
-  db.set('reviews', insertToDbFormat).write()
-  console.log('save to db.sjon done.')
-}
-function errorHandle(e) {
-  console.log(e)
-}
-init()
-getGooglePlayReviews('com.igs.mjstar31')
+  const resultObj = await getGooglePlayReviewsAndSaveDb(_appId)
+
+  res.json(resultObj)
+})
+
+app.get(`/data/:appId`, async (req, res, next) => {
+  const _appId = req.params.appId
+  // get the scrape data
+  const appIdData = db.get(_appId)
+  console.log(appIdData)
+  // respond with json
+  res.json(appIdData)
+})
+
+app.listen(3000, () => {
+  console.log(`Example App running on port http://localhost:3000`)
+})
