@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import db from './lib/db'
-import { getGooglePlayReviews, getGooglePlayReviewsAndSaveDb } from './lib/scraper'
+import { getGooglePlayReviews } from './lib/scraper'
 
 const app = express()
 app.use(cors())
@@ -9,10 +9,16 @@ app.use(cors())
 app.get(`/scrape/:appId`, async (req, res, next) => {
   const _appId = req.params.appId
   console.log(`Scraping ${_appId}!!`)
+  const resObj = { RETURN_CODE: 0, RETURN_MESSAGE: '成功' }
 
-  const resultObj = await getGooglePlayReviews(_appId)
+  let { RESULT, errorObj } = await getGooglePlayReviews(_appId)
+  resObj.RESULT = RESULT
+  if (errorObj) {
+    resObj.RETURN_CODE = errorObj.errorCode
+    resObj.RETURN_MESSAGE = errorObj.errorMessage
+  }
 
-  res.json(resultObj)
+  res.json(resObj)
 })
 
 app.get(`/data/:appId`, async (req, res, next) => {
