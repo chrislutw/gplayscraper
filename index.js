@@ -10,7 +10,7 @@ app.get(`/scrape/:appId`, async (req, res, next) => {
   const _appId = req.params.appId
   console.log(`Scraping ${_appId}!!`)
 
-  const resultObj = await getGooglePlayReviewsAndSaveDb(_appId)
+  const resultObj = await getGooglePlayReviews(_appId)
 
   res.json(resultObj)
 })
